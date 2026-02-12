@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bright Cozy Roulette 3D (Multi)</title>
+  <style>
+    html, body {
+      margin:0; height:100%; overflow:hidden;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: radial-gradient(1200px 800px at 30% 20%, #f7fffb 0%, #e9fbf2 45%, #e7f3ff 100%);
+    }
+
+    .panel {
+      background: rgba(255,255,255,.58);
+      border: 1px solid rgba(10,40,30,.10);
+      box-shadow: 0 12px 28px rgba(10,40,30,.10);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      color: #0b2a20;
+    }
+
+    #hud {
+      position: fixed; left: 14px; top: 14px; width: 380px;
+      padding: 12px;
+      z-index: 5;
+    }
+    #row { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
+    .pill {
+      padding:7px 10px; border-radius:999px;
+      border:1px solid rgba(10,40,30,.12);
+      font-size:12px;
+      background: rgba(255,255,255,.65);
+    }
+    #phase { font-weight:950; }
+
+    #chips { display:flex; gap:8px; flex-wrap: wrap; margin-top:10px; }
+    .chipBtn {
+      cursor:pointer; user-select:none;
+      padding:9px 11px; border-radius:14px;
+      border:1px solid rgba(10,40,30,.14);
+      background: rgba(255,255,255,.7);
+      font-weight:950; font-size:12px;
+      transition: transform .08s;
+    }
+    .chipBtn:active { transform: scale(.98); }
+    .chipBtn.active { outline: 2px solid rgba(20,120,80,.35); }
+
+    #bets {
+      margin-top:10px; max-height:160px; overflow:auto;
+      border:1px solid rgba(10,40,30,.10); border-radius:14px; padding:10px;
+      background: rgba(255,255,255,.6);
+      font-size:12px; line-height:1.45;
+    }
+
+    /* === 팝업 베팅판 === */
+    #boardWrap {
+      position: fixed; right: 14px; top: 14px; width: 580px;
+      z-index: 6;
+    }
+    #boardHeader {
+      display:flex; align-items:center; justify-content: space-between;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(10,40,30,.08);
+    }
+    #boardTitle {
+      font-weight: 1000;
+      letter-spacing: -0.2px;
+    }
+    #boardBtns { display:flex; gap:8px; }
+    .miniBtn {
+      cursor:pointer; user-select:none;
+      padding: 7px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(10,40,30,.12);
+      background: rgba(255,255,255,.7);
+      font-weight: 950;
+      font-size: 12px;
+    }
+
+    #boardBody { padding: 12px; }
+
+    #sectionTitle {
+      font-size: 12px; font-weight: 950; opacity: .8;
+      margin: 10px 0 8px;
+    }
+    #colorRow, #outsideRow, #dozenRow, #columnRow {
+      display:flex; gap:10px; flex-wrap: wrap;
+    }
+    .betBtn {
+      cursor:pointer; user-select:none;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(10,40,30,.12);
+      background: rgba(255,255,255,.7);
+      font-weight: 1000;
+      font-size: 12px;
+      transition: transform .08s;
+      flex: 1;
+      min-width: 120px;
+      text-align:center;
+    }
+    .betBtn:active { transform: scale(.99); }
+    .betBtn.red { color:#7a0b1b; background: rgba(255,90,90,.18); }
+    .betBtn.black { color:#111; background: rgba(30,30,30,.10); }
+
+    #grid {
+      display:grid; grid-template-columns: repeat(6, 1fr);
+      gap: 7px;
+      margin-top: 10px;
+    }
+    .cell {
+      cursor:pointer; user-select:none;
+      border-radius: 12px; padding: 10px 0;
+      text-align:center; font-weight:1000;
+      border:1px solid rgba(10,40,30,.10);
+      background: rgba(255,255,255,.7);
+      position: relative;
+    }
+    .cell .chipMark {
+      position:absolute; right:7px; top:7px;
+      font-size:11px;
+      padding:2px 7px; border-radius: 999px;
+      background: rgba(255,255,255,.82);
+      border:1px solid rgba(10,40,30,.10);
+      box-shadow: 0 6px 14px rgba(10,40,30,.10);
+    }
+    #hint {
+      opacity:.75; font-size:12px; margin-top:10px; line-height:1.4;
+    }
+
+    /* minimized 상태 */
+    #boardWrap.minimized #boardBody { display:none; }
+    #boardWrap.minimized { width: 260px; }
+
+    #toast {
+      position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+      background: rgba(255,255,255,.78);
+      color:#0b2a20;
+      border:1px solid rgba(10,40,30,.12);
+      box-shadow: 0 12px 28px rgba(10,40,30,.12);
+      padding:10px 14px; border-radius: 999px;
+      opacity: 0; transition: opacity .25s;
+      font-size: 13px;
+      backdrop-filter: blur(10px);
+      z-index: 10;
+    }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div id="hud" class="panel">
+    <div id="row">
+      <div class="pill">ID: <span id="id">-</span></div>
+      <div class="pill">잔액: $<span id="bal">-</span></div>
+      <div class="pill"><span id="phase">-</span> · <span id="timer">--</span></div>
+    </div>
+
+    <div id="chips"></div>
+    <div id="bets"></div>
+  </div>
+
+  <!-- 팝업 베팅판(최소화 가능) -->
+  <div id="boardWrap" class="panel">
+    <div id="boardHeader">
+      <div id="boardTitle">베팅판</div>
+      <div id="boardBtns">
+        <div class="miniBtn" id="toggleBoard">최소화</div>
+      </div>
+    </div>
+
+    <div id="boardBody">
+      <div id="sectionTitle">색상 (1:1)</div>
+      <div id="colorRow">
+        <div class="betBtn red" id="betRed">RED</div>
+        <div class="betBtn black" id="betBlack">BLACK</div>
+      </div>
+
+      <div id="sectionTitle">바깥 베팅 (1:1)</div>
+      <div id="outsideRow">
+        <div class="betBtn" id="betOdd">ODD</div>
+        <div class="betBtn" id="betEven">EVEN</div>
+        <div class="betBtn" id="betLow">1-18</div>
+        <div class="betBtn" id="betHigh">19-36</div>
+      </div>
+
+      <div id="sectionTitle">더즌 (2:1)</div>
+      <div id="dozenRow">
+        <div class="betBtn" id="betD1">1-12</div>
+        <div class="betBtn" id="betD2">13-24</div>
+        <div class="betBtn" id="betD3">25-36</div>
+      </div>
+
+      <div id="sectionTitle">컬럼 (2:1)</div>
+      <div id="columnRow">
+        <div class="betBtn" id="betC1">1st</div>
+        <div class="betBtn" id="betC2">2nd</div>
+        <div class="betBtn" id="betC3">3rd</div>
+      </div>
+
+      <div id="sectionTitle">숫자 (35:1)</div>
+      <div id="grid"></div>
+
+      <div id="hint">칩을 선택하고 버튼/숫자를 클릭하면 베팅돼요. (BETTING 상태에서만 가능)</div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+<script type="module">
+import * as THREE from "https://unpkg.com/three@0.161.0/build/three.module.js";
+
+// ====== WS ======
+const ws = new WebSocket("ws://localhost:8080");
+
+const elId = document.getElementById("id");
+const elBal = document.getElementById("bal");
+const elPhase = document.getElementById("phase");
+const elTimer = document.getElementById("timer");
+const elChips = document.getElementById("chips");
+const elBets = document.getElementById("bets");
+const elGrid = document.getElementById("grid");
+const toast = document.getElementById("toast");
+
+const boardWrap = document.getElementById("boardWrap");
+const toggleBoardBtn = document.getElementById("toggleBoard");
+
+let myId = null;
+let balance = 0;
+let phase = "—";
+let endsAt = 0;
+
+const CHIP_VALUES = [10, 50, 100, 500];
+let selectedChip = 50;
+
+// 표시용(서버가 권위)
+let myBets = []; // {type,value,amount,label}
+
+// 유럽식 휠 순서(클라에서도 사용: 포켓 표시/색)
+const WHEEL_ORDER = [
+  0, 32, 15, 19, 4, 21, 2, 25, 17, 34,
+  6, 27, 13, 36, 11, 30, 8, 23, 10, 5,
+  24, 16, 33, 1, 20, 14, 31, 9, 22, 18,
+  29, 7, 28, 12, 35, 3, 26
+];
+const RED_SET = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+function colorOf(n){
+  if (n === 0) return "GREEN";
+  return RED_SET.has(n) ? "RED" : "BLACK";
+}
+
+function showToast(text) {
+  toast.textContent = text;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 950);
+}
+
+function phaseLabel(p) {
+  if (p === "BETTING") return "베팅 시간";
+  if (p === "LOCKED")  return "마감!";
+  if (p === "SPIN")    return "룰렛이 돌아가요";
+  if (p === "PAYOUT")  return "정산 중";
+  return p;
+}
+
+function renderChips() {
+  elChips.innerHTML = "";
+  for (const v of CHIP_VALUES) {
+    const b = document.createElement("div");
+    b.className = "chipBtn" + (v === selectedChip ? " active" : "");
+    b.textContent = `$${v}`;
+    b.onclick = () => { selectedChip = v; renderChips(); };
+    elChips.appendChild(b);
+  }
+}
+
+function renderBets() {
+  if (myBets.length === 0) {
+    elBets.innerHTML = `<div style="opacity:.75">이번 라운드 내 베팅 없음</div>`;
+    return;
+  }
+  elBets.innerHTML = myBets.map((b) =>
+    `<div>• <b>${b.label}</b> : $${b.amount}</div>`
+  ).join("");
+}
+
+function canBetNow() {
+  return phase === "BETTING";
+}
+
+function betToServer(betType, value, amount) {
+  ws.send(JSON.stringify({ type:"BET", betType, value, amount }));
+}
+
+// ====== 베팅 기록(표시용) ======
+function addMyBet(label, type, value, amount) {
+  myBets.push({ label, type, value, amount });
+  renderBets();
+}
+
+// ====== 팝업 베팅판 최소화/복원 ======
+toggleBoardBtn.onclick = () => {
+  const minimized = boardWrap.classList.toggle("minimized");
+  toggleBoardBtn.textContent = minimized ? "복원" : "최소화";
+};
+
+// ====== 2D 베팅판(숫자) ======
+function markChip(cell, amount) {
+  const mark = document.createElement("div");
+  mark.className = "chipMark";
+  mark.textContent = `+$${amount}`;
+  cell.appendChild(mark);
+  setTimeout(() => mark.remove(), 1400);
+}
+
+function buildGrid() {
+  for (let n = 0; n <= 36; n++) {
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    cell.textContent = n;
+
+    cell.onclick = () => {
+      if (!canBetNow()) return showToast("지금은 베팅 시간이 아니에요");
+      if (balance < selectedChip) return showToast("잔액이 부족해요");
+      betToServer("NUMBER", n, selectedChip);
+      addMyBet(`#${n}`, "NUMBER", n, selectedChip);
+      markChip(cell, selectedChip);
+    };
+
+    elGrid.appendChild(cell);
+  }
+}
+
+function betSimple(buttonId, label, betType, value) {
+  document.getElementById(buttonId).onclick = () => {
+    if (!canBetNow()) return showToast("지금은 베팅 시간이 아니에요");
+    if (balance < selectedChip) return showToast("잔액이 부족해요");
+    betToServer(betType, value, selectedChip);
+    addMyBet(label, betType, value, selectedChip);
+    showToast(`${label} 베팅!`);
+  };
+}
+
+betSimple("betRed", "RED", "COLOR", "RED");
+betSimple("betBlack", "BLACK", "COLOR", "BLACK");
+betSimple("betOdd", "ODD", "PARITY", "ODD");
+betSimple("betEven", "EVEN", "PARITY", "EVEN");
+betSimple("betLow", "1-18", "RANGE", "LOW");
+betSimple("betHigh", "19-36", "RANGE", "HIGH");
+betSimple("betD1", "1-12", "DOZEN", "D1");
+betSimple("betD2", "13-24", "DOZEN", "D2");
+betSimple("betD3", "25-36", "DOZEN", "D3");
+betSimple("betC1", "Column 1st", "COLUMN", "C1");
+betSimple("betC2", "Column 2nd", "COLUMN", "C2");
+betSimple("betC3", "Column 3rd", "COLUMN", "C3");
+
+renderChips();
+renderBets();
+buildGrid();
+
+// ====== 3D 씬(밝고 편안한 분위기) ======
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf3fff9);
+
+const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 120);
+camera.position.set(0, 7.2, 12.5);
+camera.lookAt(0, 1.1, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+
+// 조명
+scene.add(new THREE.HemisphereLight(0xffffff, 0xd8f1ff, 0.9));
+
+const key = new THREE.DirectionalLight(0xffffff, 0.75);
+key.position.set(8, 14, 6);
+scene.add(key);
+
+const fill = new THREE.DirectionalLight(0xfff2da, 0.45);
+fill.position.set(-8, 10, -6);
+scene.add(fill);
+
+// 바닥
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(28, 80),
+  new THREE.MeshStandardMaterial({ color: 0xf7fbff, roughness: 1.0 })
+);
+ground.rotation.x = -Math.PI/2;
+ground.position.y = -0.31;
+scene.add(ground);
+
+// 테이블(밝은 펠트)
+const table = new THREE.Mesh(
+  new THREE.CylinderGeometry(8.1, 8.1, 0.62, 72),
+  new THREE.MeshStandardMaterial({ color: 0x7bd3b7, roughness: 0.85 })
+);
+table.position.y = 0.0;
+scene.add(table);
+
+// 테이블 레일(우드)
+const rail = new THREE.Mesh(
+  new THREE.TorusGeometry(8.05, 0.24, 18, 180),
+  new THREE.MeshStandardMaterial({ color: 0xcaa47a, roughness: 0.55, metalness: 0.05 })
+);
+rail.rotation.x = Math.PI/2;
+rail.position.y = 0.28;
+scene.add(rail);
+
+// 볼(룰렛 외곽)
+const bowl = new THREE.Mesh(
+  new THREE.CylinderGeometry(5.2, 5.55, 1.12, 72),
+  new THREE.MeshStandardMaterial({ color: 0xf0efe9, roughness: 0.55, metalness: 0.05 })
+);
+bowl.position.y = 0.74;
+scene.add(bowl);
+
+// 휠 그룹
+const wheel = new THREE.Group();
+wheel.position.y = 1.05;
+scene.add(wheel);
+
+// 휠 디스크
+const wheelDisk = new THREE.Mesh(
+  new THREE.CylinderGeometry(4.4, 4.4, 0.35, 72),
+  new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35, metalness: 0.15 })
+);
+wheelDisk.rotation.x = Math.PI/2;
+wheel.add(wheelDisk);
+
+// 포켓 링(시각적)
+const ring = new THREE.Mesh(
+  new THREE.TorusGeometry(4.02, 0.22, 22, 200),
+  new THREE.MeshStandardMaterial({ color: 0xe6e0d6, roughness: 0.35, metalness: 0.2 })
+);
+ring.rotation.x = Math.PI/2;
+wheel.add(ring);
+
+// === 포켓(번호/색) 표시 ===
+const pockets = new THREE.Group();
+wheel.add(pockets);
+
+// 작은 포켓 블록 + 번호 라벨(캔버스 텍스처)
+function makeLabelTexture(text, bg, fg) {
+  const c = document.createElement("canvas");
+  c.width = 256; c.height = 256;
+  const ctx = c.getContext("2d");
+
+  // 배경
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, c.width, c.height);
+
+  // 안쪽 테두리
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.lineWidth = 10;
+  ctx.strokeRect(10, 10, c.width - 20, c.height - 20);
+
+  // 글자
+  ctx.fillStyle = fg;
+  ctx.font = "bold 120px system-ui, -apple-system, Segoe UI, Roboto";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, c.width/2, c.height/2 + 6);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function pocketColors(n) {
+  const c = colorOf(n);
+  if (c === "GREEN") return { bg:"#2fbf71", fg:"#ffffff", block:"#2fbf71" };
+  if (c === "RED") return { bg:"#ff6b6b", fg:"#ffffff", block:"#ff6b6b" };
+  return { bg:"#3a3a3a", fg:"#ffffff", block:"#3a3a3a" };
+}
+
+// 포켓 배치(37개)
+(function buildPockets(){
+  const radius = 3.75;
+  const slot = (2*Math.PI)/37;
+
+  for (let i=0;i<37;i++){
+    const n = WHEEL_ORDER[i];
+    const col = pocketColors(n);
+
+    // 포켓 블록(얇은 박스)
+    const block = new THREE.Mesh(
+      new THREE.BoxGeometry(0.42, 0.06, 0.24),
+      new THREE.MeshStandardMaterial({ color: col.block, roughness: 0.45, metalness: 0.05 })
+    );
+
+    // 번호 라벨(평면)
+    const tex = makeLabelTexture(String(n), col.bg, col.fg);
+    const label = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.36, 0.36),
+      new THREE.MeshStandardMaterial({ map: tex, transparent: false, roughness: 0.65, metalness: 0.0 })
+    );
+
+    const angle = i * slot;
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+
+    block.position.set(x, 0.20, z);
+    block.rotation.y = -angle + Math.PI/2;
+
+    label.position.set(x, 0.23, z);
+    label.rotation.x = -Math.PI/2;
+    label.rotation.z = angle; // 글자가 바깥쪽을 향하게
+
+    pockets.add(block);
+    pockets.add(label);
+  }
+})();
+
+// 공(가짜 물리)
+const ball = new THREE.Mesh(
+  new THREE.SphereGeometry(0.12, 24, 24),
+  new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.12, metalness: 0.1 })
+);
+scene.add(ball);
+
+// ====== 스핀 연출 ======
+let spinning = false;
+let spinStart = 0;
+let spinDuration = 7000;
+let wheelStartRot = 0;
+let wheelTargetRot = 0;
+let resultWheelIndex = null;
+
+function slotAngle(idx) {
+  return idx * ((2*Math.PI) / 37);
+}
+function easeOutCubic(t){ return 1 - Math.pow(1-t,3); }
+
+function startSpin(resultIdx) {
+  resultWheelIndex = resultIdx;
+
+  spinning = true;
+  spinStart = performance.now();
+  wheelStartRot = wheel.rotation.y;
+
+  const extraTurns = 10 * 2 * Math.PI;
+  const frontOffset = Math.PI * 0.5;   // 정면 보정(연출)
+  const target = frontOffset - slotAngle(resultIdx);
+
+  wheelTargetRot = wheelStartRot + extraTurns + target;
+}
+
+// 타이머
+function updateTimer() {
+  if (!endsAt) return;
+  const ms = endsAt - Date.now();
+  elTimer.textContent = ms > 0 ? `${Math.ceil(ms/1000)}s` : "0s";
+}
+setInterval(updateTimer, 200);
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const t = performance.now() * 0.002;
+  const railR = 4.8;
+  let ballAngle = t;
+
+  if (spinning) {
+    const now = performance.now();
+    const p = Math.min(1, (now - spinStart) / spinDuration);
+    const e = easeOutCubic(p);
+
+    // 휠 회전
+    wheel.rotation.y = wheelStartRot + (wheelTargetRot - wheelStartRot) * e;
+
+    // 공: 초반 빠르게 돌다 후반 목표 슬롯으로 수렴 + 높이 내려감
+    const fast = (1 - e) * 6.0 + 1.0;
+    ballAngle = t * fast;
+
+    if (resultWheelIndex != null) {
+      const targetA = slotAngle(resultWheelIndex) + wheel.rotation.y + Math.PI;
+      const mix = Math.min(1, e * 1.15);
+      let da = ((targetA - ballAngle + Math.PI) % (2*Math.PI)) - Math.PI;
+      ballAngle = ballAngle + da * mix;
+      ball.position.y = 1.85 - mix * 0.70;
+    }
+
+    if (p >= 1) spinning = false;
+  } else {
+    ball.position.y = 1.85;
+  }
+
+  ball.position.x = Math.cos(ballAngle) * railR;
+  ball.position.z = Math.sin(ballAngle) * railR;
+
+  renderer.render(scene, camera);
+}
+animate();
+
+addEventListener("resize", () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ====== WS 메시지 처리 ======
+ws.onmessage = (ev) => {
+  const msg = JSON.parse(ev.data);
+
+  if (msg.type === "WELCOME") {
+    myId = msg.id;
+    balance = msg.balance;
+    phase = msg.phase;
+    endsAt = msg.endsAt;
+
+    elId.textContent = myId;
+    elBal.textContent = balance;
+    elPhase.textContent = phaseLabel(phase);
+
+    showToast("편안하게 즐겨보자 🙂 (시작 $1000)");
+  }
+
+  if (msg.type === "PHASE") {
+    phase = msg.phase;
+    endsAt = msg.endsAt;
+    elPhase.textContent = phaseLabel(phase);
+
+    if (phase === "BETTING") {
+      myBets = [];
+      renderBets();
+      showToast("베팅 시작! 천천히 골라봐요");
+    }
+    if (phase === "LOCKED") showToast("마감됐어요!");
+  }
+
+  if (msg.type === "BALANCE") {
+    balance = msg.balance;
+    elBal.textContent = balance;
+  }
+
+  if (msg.type === "SPIN") {
+    startSpin(msg.resultWheelIndex);
+    showToast("룰렛이 돌아가요…");
+  }
+
+  if (msg.type === "RESULT") {
+    showToast(`결과: ${msg.resultNumber} (${msg.color})`);
+  }
+};
+
+ws.onopen = () => showToast("연결 중…");
+ws.onerror = () => showToast("서버 연결 오류");
+</script>
+</body>
+</html>
