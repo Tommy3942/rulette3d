@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bright Cozy Roulette 3D (Multi)</title>
+  <script src="./config.js"></script>
+
   <style>
     html, body {
       margin:0; height:100%; overflow:hidden;
@@ -211,7 +213,8 @@
 import * as THREE from "https://unpkg.com/three@0.161.0/build/three.module.js";
 
 // ====== WS ======
-const ws = new WebSocket("ws://localhost:8080");
+const WS = new WebSocket(window.WSS_ENDPOINT || "ws://localhost:8080");
+
 
 const elId = document.getElementById("id");
 const elBal = document.getElementById("bal");
