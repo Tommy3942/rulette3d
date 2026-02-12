@@ -213,7 +213,7 @@
 import * as THREE from "https://unpkg.com/three@0.161.0/build/three.module.js";
 
 // ====== WS ======
-const WS = new WebSocket(window.WSS_ENDPOINT || "ws://localhost:8080");
+const ws = new WebSocket(window.WSS_ENDPOINT || "ws://localhost:8080");
 
 
 const elId = document.getElementById("id");
